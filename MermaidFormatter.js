@@ -1,3 +1,11 @@
+class Connector {
+  static connect(from, to, label = '', condition = '') {
+    const connectionLabel = label ? `|${label}| ` : '';
+    const conditionWrapper = condition ? `{${condition}}` : '';
+    return `${from} --> ${connectionLabel}${to}${conditionWrapper}`;
+  }
+}
+
 class MermaidCodeBuilder {
   constructor() {
     this.code = 'graph TD;\n ';
@@ -32,6 +40,11 @@ class MermaidCodeBuilder {
   getLastDecision() {
     return this.lastDecision;
   }
+
+  addConnection(from, to, label = '', condition = '') {
+    const connectionLine = Connector.connect(from, to, label, condition);
+    this.addLine(connectionLine);
+  }
 }
 
 class StepHandler {
@@ -44,7 +57,7 @@ class StepHandler {
     const currentStep = this.codeBuilder.getLastStep();
     if (currentStep > 1) {
       const previousStep = currentStep - 1;
-      this.codeBuilder.addLine(`${previousStep} --> ${currentStep}[${line}]`);
+      this.codeBuilder.addConnection(previousStep, `${currentStep}[${line}]`);
     } else {
       this.codeBuilder.addLine(`${currentStep}[${line}]`);
     }
@@ -62,8 +75,7 @@ class DecisionHandler {
     const condition = line.substring(4).trim();
     this.codeBuilder.incrementStepCounter();
     const currentBranchStep = this.codeBuilder.getLastStep();
-    this.codeBuilder.addLine(`${lastDecision} --> |${branch}| ${currentBranchStep}[${condition}]`);
-    this.codeBuilder.setLastStep(currentBranchStep);
+    this.codeBuilder.addConnection(lastDecision, `${currentBranchStep}[${condition}]`, branch);
   }
 }
 
@@ -77,14 +89,11 @@ class IfHandler {
     this.codeBuilder.incrementStepCounter();
     const currentIfStep = this.codeBuilder.getLastStep();
     if (this.codeBuilder.getLastStep() !== 1) {
-      // If it's not the first step, connect it to the previous step
-      const previousStep = this.codeBuilder.getLastStep() - 1;
-      this.codeBuilder.addLine(`${previousStep} --> ${currentIfStep}{${condition}}`);
+      const previousStep = currentIfStep - 1;
+      this.codeBuilder.addConnection(previousStep, currentIfStep, '', condition);
     } else {
-      // If it's the first step, just define the condition
       this.codeBuilder.addLine(`${currentIfStep}{${condition}}`);
     }
-    // Set the last decision for the 'yes' or 'no' branch to connect to
     this.codeBuilder.setLastDecision(currentIfStep);
   }
 }

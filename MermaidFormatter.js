@@ -73,7 +73,8 @@ class StepHandler {
       for (let i = lastIf + 1; i < previousStep; i++) {
         this.codeBuilder.addConnection(i, `${currentStep}[${line}]`);
       }
-      // reset
+      // reset if and decision
+      this.codeBuilder.setlastIf(0);
       this.codeBuilder.setlastDecision(0);
     }
   }
@@ -122,18 +123,34 @@ class IfHandler {
 class MermaidFormatter {
   constructor() {
     this.codeBuilder = new MermaidCodeBuilder();
-    this.lastIf = 0; // Keeps track of the last decision step for branching.
-    this.lastDecision = 0; // Keeps track of the last decision step for branching.
+    this.codeBuilder.setlastIf(0);
+    this.codeBuilder.setlastDecision(0);
   }
 
   convertToMermaid(input) {
-    const lines = input.trim().split('\n').filter(line => line); // 空行を除外
+    console.log(`input: ${input}`)
+
+    const lines = input.split('\n').filter(line => line);
+    // 1行目のindentを取得する
+    const base_indent = lines[0].match(/^ */)[0].length;
+
     lines.forEach(line => {
+      // inputを改行で区切り、最初の空文字の数を数え、indentに入れる
+      const indent = line.split('\n')[0].match(/^ */)[0].length - base_indent;
+      console.log(`indent: ${indent}`);
+
       const trimmedLine = line.trim();
+
+      // 空行であればskip
+      if (trimmedLine.length === 0) return;
+
+      console.log(`trimmedLine: ${trimmedLine}`);
+
       if (trimmedLine.startsWith('if ')) {
         const ifHandler = new IfHandler(this.codeBuilder);
         this.lastIf = ifHandler.handle(trimmedLine);
-      } else if (trimmedLine.startsWith('yes ') || trimmedLine.startsWith('no ')) {
+      } else if (trimmedLine.includes(' ') && indent > 0) {
+      // } else if (trimmedLine.startsWith('yes ') || trimmedLine.startsWith('no ')) {
         const decisionHandler = new DecisionHandler(this.codeBuilder);
         this.lastDecision = decisionHandler.handle(trimmedLine, this.codeBuilder.getlastIf());
       } else {

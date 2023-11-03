@@ -28,16 +28,21 @@ class MermaidCodeBuilder {
     return this.code.trimEnd();
   }
 
-  setLastStep(stepNumber) {
-    this.lastStep = stepNumber;
+  setlastIf(stepNumber) {
+    this.lastIf = stepNumber;
   }
 
-  setLastDecision(stepNumber) {
+  // Get the last decision step
+  getlastIf() {
+    return this.lastIf;
+  }
+
+  setlastDecision(stepNumber) {
     this.lastDecision = stepNumber;
   }
 
   // Get the last decision step
-  getLastDecision() {
+  getlastDecision() {
     return this.lastDecision;
   }
 
@@ -55,11 +60,21 @@ class StepHandler {
   handle(line) {
     this.codeBuilder.incrementStepCounter();
     const currentStep = this.codeBuilder.getLastStep();
+    const previousStep = currentStep - 1;
     if (currentStep > 1) {
-      const previousStep = currentStep - 1;
       this.codeBuilder.addConnection(previousStep, `${currentStep}[${line}]`);
     } else {
       this.codeBuilder.addLine(`${currentStep}[${line}]`);
+    }
+    // 直前の行が 'yes ' または 'no ' で始まっていた場合、直前の'if '行+1から現在行までのconnectionを追加する
+    if (previousStep == this.codeBuilder.getlastDecision()) {
+      const lastIf = this.codeBuilder.getlastIf();
+      // lastIf から lastDecision までのconnectionを追加する
+      for (let i = lastIf + 1; i < previousStep; i++) {
+        this.codeBuilder.addConnection(i, `${currentStep}[${line}]`);
+      }
+      // reset
+      this.codeBuilder.setlastDecision(0);
     }
   }
 }
@@ -70,12 +85,16 @@ class DecisionHandler {
     this.codeBuilder = codeBuilder;
   }
 
-  handle(line, lastDecision) {
-    const branch = line.startsWith('yes ') ? 'yes' : 'no';
-    const condition = line.substring(4).trim();
+  handle(line, lastIf) {
+    // Find the index of the first space to identify the branch label (yes or no)
+    const spaceIndex = line.indexOf(' ');
+    const branch = line.substring(0, spaceIndex); // 'yes' or 'no'
+    const condition = line.substring(spaceIndex + 1).trim();
+    
     this.codeBuilder.incrementStepCounter();
     const currentBranchStep = this.codeBuilder.getLastStep();
-    this.codeBuilder.addConnection(lastDecision, `${currentBranchStep}[${condition}]`, branch);
+    this.codeBuilder.addConnection(lastIf, `${currentBranchStep}[${condition}]`, branch);
+    this.codeBuilder.setlastDecision(currentBranchStep);
   }
 }
 
@@ -94,7 +113,7 @@ class IfHandler {
     } else {
       this.codeBuilder.addLine(`${currentIfStep}{${condition}}`);
     }
-    this.codeBuilder.setLastDecision(currentIfStep);
+    this.codeBuilder.setlastIf(currentIfStep);
   }
 }
 
@@ -103,6 +122,7 @@ class IfHandler {
 class MermaidFormatter {
   constructor() {
     this.codeBuilder = new MermaidCodeBuilder();
+    this.lastIf = 0; // Keeps track of the last decision step for branching.
     this.lastDecision = 0; // Keeps track of the last decision step for branching.
   }
 
@@ -112,10 +132,10 @@ class MermaidFormatter {
       const trimmedLine = line.trim();
       if (trimmedLine.startsWith('if ')) {
         const ifHandler = new IfHandler(this.codeBuilder);
-        this.lastDecision = ifHandler.handle(trimmedLine);
+        this.lastIf = ifHandler.handle(trimmedLine);
       } else if (trimmedLine.startsWith('yes ') || trimmedLine.startsWith('no ')) {
         const decisionHandler = new DecisionHandler(this.codeBuilder);
-        decisionHandler.handle(trimmedLine, this.codeBuilder.getLastDecision());
+        this.lastDecision = decisionHandler.handle(trimmedLine, this.codeBuilder.getlastIf());
       } else {
         const stepHandler = new StepHandler(this.codeBuilder);
         stepHandler.handle(trimmedLine);

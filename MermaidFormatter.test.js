@@ -90,9 +90,9 @@ function testCase4() {
  1 --> 2{肉が早く炒め終わる}
  2 --> |yes| 3[肉のフライパンに野菜を入れる]
  2 --> |no| 4[野菜のフライパンに肉を入れる]
- 3 --> 5[空いたコンロでルー & 米を煮込む]
  4 --> 5[空いたコンロでルー & 米を煮込む]
- 5 --> 6[混ぜる & かき混ぜる]
+ 3 --> 5[空いたコンロでルー & 米を煮込む]
+ 5 --> 6[混ぜる]
  6 --> 7[盛り付ける]`;
 
     testFormatter(input, expected);
@@ -174,8 +174,8 @@ function runAllTests() {
     testCase2();
     console.log('case3');
     testCase3();
-    // console.log('case4')
-    // testCase4();
+    console.log('case4')
+    testCase4();
     // console.log('case5')
     // testCase5();
     console.log('All tests passed!');
